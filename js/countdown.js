@@ -219,9 +219,21 @@
     /* ---------- clock ---------- */
     const RING = 2 * Math.PI * 122;
 
+    // The yellow arc is the time still to come: it starts at the hand and runs clockwise to 12 o'clock,
+    // so its leading edge sweeps clockwise together with the hand as time runs out.
+    function arcAttrs(frac) {
+      const left = Math.max(0, 1 - frac);
+      return {
+        dash: (RING * left).toFixed(2) + ' ' + RING.toFixed(2),
+        rotate: 'rotate(' + (-90 + frac * 360).toFixed(2) + ' 150 150)',
+        opacity: left <= 0.002 ? '0' : '1',
+      };
+    }
+
     function clockHtml(c) {
       const rem = Math.max(0, c.remaining);
       const frac = 1 - rem / CLOCK_SECONDS;
+      const arc = arcAttrs(frac);
       let ticks = '';
       for (let i = 0; i < 30; i++) {
         const major = i % 5 === 0;
@@ -233,8 +245,8 @@
         '<svg viewBox="0 0 300 300" role="img" aria-label="30 second clock">' +
         '<circle class="clock-face" cx="150" cy="150" r="146"/>' + ticks +
         '<circle class="clock-track" cx="150" cy="150" r="122"/>' +
-        '<circle class="clock-arc" cx="150" cy="150" r="122" stroke-dasharray="' + RING.toFixed(2) + '" stroke-dashoffset="' + (RING * frac).toFixed(2) + '" transform="rotate(-90 150 150)"/>' +
-        '<g class="clock-hand" transform="rotate(' + (frac * 360).toFixed(2) + ' 150 150)"><line x1="150" y1="84" x2="150" y2="30"/><circle cx="150" cy="30" r="7"/></g>' +
+        '<circle class="clock-arc" cx="150" cy="150" r="122" stroke-dasharray="' + arc.dash + '" stroke-opacity="' + arc.opacity + '" transform="' + arc.rotate + '"/>' +
+        '<g class="clock-hand" transform="rotate(' + (frac * 360).toFixed(2) + ' 150 150)"><line x1="150" y1="84" x2="150" y2="28"/></g>' +
         '<text class="clock-num" x="150" y="172" text-anchor="middle">' + Math.ceil(rem) + '</text>' +
         '<text class="clock-label" x="150" y="206" text-anchor="middle">' + label + '</text>' +
         '</svg></div>'
@@ -250,7 +262,11 @@
       const frac = 1 - rem / CLOCK_SECONDS;
       el.dataset.state = c.state;
       el.dataset.low = c.state !== 'idle' && rem <= 5 ? '1' : '0';
-      el.querySelector('.clock-arc').setAttribute('stroke-dashoffset', (RING * frac).toFixed(2));
+      const arc = arcAttrs(frac);
+      const arcEl = el.querySelector('.clock-arc');
+      arcEl.setAttribute('stroke-dasharray', arc.dash);
+      arcEl.setAttribute('stroke-opacity', arc.opacity);
+      arcEl.setAttribute('transform', arc.rotate);
       el.querySelector('.clock-hand').setAttribute('transform', 'rotate(' + (frac * 360).toFixed(2) + ' 150 150)');
       el.querySelector('.clock-num').textContent = Math.ceil(rem);
       el.querySelector('.clock-label').textContent = c.state === 'done' ? 'TIME!' : 'SECONDS';
